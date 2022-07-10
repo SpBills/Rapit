@@ -1,5 +1,6 @@
 use std::str::Chars;
 
+#[derive(Debug)]
 pub enum KeywordKind {
     Fn,
     If,
@@ -8,16 +9,16 @@ pub enum KeywordKind {
 #[derive(Debug)]
 pub enum TokenKind {
     // Multi Char
-    Ident,
+    Ident(String),
     // Multi Char
-    Literal,
+    Literal(String),
     // Multi Char, beginning with #
-    Comment,
+    Comment(String),
     // Multi Char
-    Keyword,
+    Keyword(KeywordKind),
 
     // +, -, *, /
-    Operator,
+    Operator(char),
     // " "
     Whitespace,
     // (
@@ -28,15 +29,19 @@ pub enum TokenKind {
     OpenBrace,
     // }
     CloseBrace,
+    // =
+    Equals,
 
     Unknown,
 }
 
 #[derive(Debug)]
 pub struct Token {
-    kind: TokenKind,
-    len: usize,
+    pub kind: TokenKind,
+    pub len: usize,
 }
+
+impl Token {}
 
 impl Token {
     fn new(kind: TokenKind, len: usize) -> Self {
@@ -44,9 +49,7 @@ impl Token {
     }
 
     fn is_keyword(kw: &str) -> bool {
-        let keywords = ["fn", "if"];
-
-        keywords.contains(&kw)
+        Self::str_to_keyword(kw).is_some()
     }
 
     fn str_to_keyword(kw: &str) -> Option<KeywordKind> {
@@ -115,6 +118,10 @@ impl<'a> Cursor<'a> {
         self.bump()
             .map(|c| match c {
                 x if x.is_whitespace() => TokenKind::Whitespace,
+                
+                // Operators
+                '+' | '-' | '*' | '/' => TokenKind::Operator(c),
+
                 '#' => self.comment(c),
                 '(' => TokenKind::OpenParen,
                 ')' => TokenKind::CloseParen,
@@ -122,14 +129,14 @@ impl<'a> Cursor<'a> {
                 '}' => TokenKind::CloseBrace,
 
                 first_char if valid_multi_char_start(first_char) => match self.mutli_char(c) {
-                    kw if Token::is_keyword(&kw) => TokenKind::Keyword,
-                    _ => TokenKind::Ident,
+                    kw if Token::is_keyword(&kw) => TokenKind::Keyword(Token::str_to_keyword(&kw).unwrap()),
+                    kw => TokenKind::Ident(kw),
                 },
 
                 // If it doesn't have a valid multi_char_start, then it's likely a literal.
                 first_char if valid_literal_start(first_char) => {
-                    let _ = self.literal(c);
-                    TokenKind::Literal
+                    let lit = self.literal(c);
+                    TokenKind::Literal(lit)
                 }
 
                 _ => TokenKind::Unknown,
@@ -142,9 +149,8 @@ impl<'a> Cursor<'a> {
     }
 
     fn comment(&mut self, start: char) -> TokenKind {
-        self.consume_until(start, eol);
-
-        TokenKind::Comment
+        let com = self.consume_until(start, eol);
+        TokenKind::Comment(com)
     }
 
     fn mutli_char(&mut self, start: char) -> String {
