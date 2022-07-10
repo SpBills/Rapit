@@ -1,12 +1,12 @@
 use std::str::Chars;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum KeywordKind {
     Fn,
     If,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TokenKind {
     // Multi Char
     Ident(String),
@@ -57,6 +57,30 @@ impl Token {
             "fn" => Some(KeywordKind::Fn),
             "if" => Some(KeywordKind::If),
 
+            _ => None,
+        }
+    }
+
+    pub fn inner_string(&self) -> Option<String> {
+        match &self.kind {
+            TokenKind::Ident(i) => Some(i.to_string()),
+            TokenKind::Literal(i) => Some(i.to_string()),
+            TokenKind::Comment(i) => Some(i.to_string()),
+
+            _ => None,
+        }
+    }
+
+    pub fn inner_keyword(&self) -> Option<KeywordKind> {
+        match self.kind {
+            TokenKind::Keyword(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn inner_operator(&self) -> Option<char> {
+        match self.kind {
+            TokenKind::Operator(i) => Some(i),
             _ => None,
         }
     }
@@ -118,7 +142,7 @@ impl<'a> Cursor<'a> {
         self.bump()
             .map(|c| match c {
                 x if x.is_whitespace() => TokenKind::Whitespace,
-                
+
                 // Operators
                 '+' | '-' | '*' | '/' => TokenKind::Operator(c),
 
@@ -127,9 +151,12 @@ impl<'a> Cursor<'a> {
                 ')' => TokenKind::CloseParen,
                 '{' => TokenKind::OpenBrace,
                 '}' => TokenKind::CloseBrace,
+                '=' => TokenKind::Equals,
 
                 first_char if valid_multi_char_start(first_char) => match self.mutli_char(c) {
-                    kw if Token::is_keyword(&kw) => TokenKind::Keyword(Token::str_to_keyword(&kw).unwrap()),
+                    kw if Token::is_keyword(&kw) => {
+                        TokenKind::Keyword(Token::str_to_keyword(&kw).unwrap())
+                    }
                     kw => TokenKind::Ident(kw),
                 },
 
