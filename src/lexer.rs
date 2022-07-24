@@ -74,6 +74,14 @@ impl Token {
         }
     }
 
+    pub fn inner_int(&self) -> Option<usize> {
+        match &self.kind {
+            TokenKind::Ident(i) => Some(i.parse::<usize>().ok()?),
+
+            _ => None,
+        }
+    }
+
     pub fn inner_keyword(&self) -> Option<KeywordKind> {
         match self.kind {
             TokenKind::Keyword(i) => Some(i),
