@@ -132,13 +132,13 @@ impl Parser<'_> {
         Ok(())
     }
 
-    fn assert_next(&mut self, next: TokenKind) -> Result<(), ParseError> {
-        if next != self.peek_iter()?.kind {
-            self.next_iter()?;
+    fn assert_next(&mut self, next: TokenKind) -> Result<&Token, ParseError> {
+        let n = self.next_iter()?;
+        if next != n.kind {
             return Err(ParseError::UnexpectedToken);
         }
 
-        Ok(())
+        Ok(n)
     }
 
     fn term(&mut self) -> ParsedStatement<Term> {
@@ -148,7 +148,7 @@ impl Parser<'_> {
 
         match next.kind {
             TokenKind::Ident(_) => Ok(Term::Ident(self.ident()?)),
-            TokenKind::Literal(_) => Ok(Term::Literal(self.int()?)),
+            TokenKind::Literal(_) => Ok(Term::Literal(self.literal()?)),
 
             _ => Err(ParseError::UnexpectedToken),
         }
@@ -236,8 +236,17 @@ impl Parser<'_> {
         Ok(block)
     }
 
-    fn int(&mut self) -> ParsedStatement<Literal> {
-        self.next_iter()?.inner_int().ok_or(ParseError::FalseInner)
+    fn literal(&mut self) -> ParsedStatement<Literal> {
+        let lit = self
+            .next_iter()?
+            .inner_int()
+            .ok_or(ParseError::FalseInner)?;
+
+        self.assert_not_next(TokenKind::Operator('<'), ParseError::ActualTest)?;
+        self.assert_not_next(TokenKind::Operator('+'), ParseError::ActualSum)?;
+        self.assert_not_next(TokenKind::Operator('-'), ParseError::ActualSum)?;
+
+        Ok(lit)
     }
 
     fn ident(&mut self) -> ParsedStatement<Ident> {
@@ -313,8 +322,6 @@ impl Parser<'_> {
 
         while let Ok(_) = parser.peek_iter() {
             let expr = parser.statement().unwrap();
-            println!("{:?}", expr);
-
             body.push(expr);
         }
 

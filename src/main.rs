@@ -20,5 +20,5 @@ fn main() {
 
     let ast = Parser::parse(filtered_tokens);
 
-    println!("{:?}", ast)
+    println!("{:#?}", ast)
 }
