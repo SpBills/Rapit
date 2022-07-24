@@ -76,7 +76,7 @@ impl Token {
 
     pub fn inner_int(&self) -> Option<usize> {
         match &self.kind {
-            TokenKind::Ident(i) => Some(i.parse::<usize>().ok()?),
+            TokenKind::Literal(i) => Some(i.parse::<usize>().ok()?),
 
             _ => None,
         }

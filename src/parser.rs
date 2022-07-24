@@ -4,11 +4,12 @@ use crate::lexer::{KeywordKind, Token, TokenKind};
 
 #[derive(Debug)]
 enum ParseError {
-    FunctionDeclInvalid,
     FalseInner,
     UnexpectedEOF,
-    FalseOperator,
     UnexpectedToken,
+    ActualAssignment(Ident),
+    ActualTest,
+    ActualSum,
 }
 
 #[derive(Debug)]
@@ -17,7 +18,7 @@ enum Operator {
     Subtract,
     Divide,
     Multiply,
-    LessThan
+    LessThan,
 }
 
 impl Operator {
@@ -71,7 +72,7 @@ struct AssignmentExpr {
 }
 
 type Ident = String;
-type Int = usize;
+type Literal = usize;
 
 #[derive(Debug)]
 enum Test {
@@ -96,7 +97,7 @@ enum Sum {
 #[derive(Debug)]
 enum Term {
     Ident(Ident),
-    Int(Int),
+    Literal(Literal),
     ParenExpr(ParenExpr),
 }
 
@@ -122,6 +123,15 @@ impl Parser<'_> {
         self.iter.next().ok_or(ParseError::UnexpectedEOF)
     }
 
+    fn assert_not_next(&mut self, next: TokenKind, err: ParseError) -> Result<(), ParseError> {
+        if next == self.peek_iter()?.kind {
+            self.next_iter()?;
+            return Err(err);
+        }
+
+        Ok(())
+    }
+
     fn assert_next(&mut self, next: TokenKind) -> Result<(), ParseError> {
         if next != self.peek_iter()?.kind {
             self.next_iter()?;
@@ -134,62 +144,69 @@ impl Parser<'_> {
     fn term(&mut self) -> ParsedStatement<Term> {
         let next = self.peek_iter()?;
 
+        println!("{:?}", next);
+
         match next.kind {
             TokenKind::Ident(_) => Ok(Term::Ident(self.ident()?)),
+            TokenKind::Literal(_) => Ok(Term::Literal(self.int()?)),
 
             _ => Err(ParseError::UnexpectedToken),
         }
     }
 
     fn sum(&mut self) -> ParsedStatement<Sum> {
-        if let Ok(x) = self.term() {
-            Ok(Sum::Term(x))
-        } else {
-            let op1 = Box::new(self.sum()?);
-            let op_string = self
-                .next_iter()?
-                .inner_string()
-                .ok_or(ParseError::FalseInner)?;
-            let op = Operator::char_to_op(op_string.chars().next().unwrap())
-                .ok_or(ParseError::UnexpectedToken)?;
-            let op2 = Box::new(self.sum()?);
+        let t = self.term();
 
-            Ok(Sum::AddOp(Op {
-                op1,
-                op2,
-                operator: op,
-            }))
+        match t {
+            Err(ParseError::ActualSum) => {
+                let op1 = Box::new(self.sum()?);
+                let op_string = self
+                    .next_iter()?
+                    .inner_string()
+                    .ok_or(ParseError::FalseInner)?;
+                let op = Operator::char_to_op(op_string.chars().next().unwrap())
+                    .ok_or(ParseError::UnexpectedToken)?;
+                let op2 = Box::new(self.sum()?);
+
+                Ok(Sum::AddOp(Op {
+                    op1,
+                    op2,
+                    operator: op,
+                }))
+            }
+            _ => Ok(Sum::Term(t?)),
         }
     }
 
     fn test(&mut self) -> ParsedStatement<Test> {
-        if let Ok(x) = self.sum() {
-            Ok(Test::Unary(x))
-        } else {
-            let op1 = Box::new(self.sum()?);
-            self.assert_next(TokenKind::Operator('<'))?;
-            let op2 = Box::new(self.sum()?);
+        let s = self.sum();
 
-            Ok(Test::LT(Op {
-                op1,
-                op2,
-                operator: Operator::LessThan
-            }))
+        match s {
+            Err(ParseError::ActualTest) => {
+                let op1 = Box::new(self.sum()?);
+                self.assert_next(TokenKind::Operator('<'))?;
+                let op2 = Box::new(self.sum()?);
+
+                Ok(Test::LT(Op {
+                    op1,
+                    op2,
+                    operator: Operator::LessThan,
+                }))
+            }
+            _ => Ok(Test::Unary(s?)),
         }
     }
 
     fn expr(&mut self) -> ParsedStatement<Expr> {
-        if let Ok(x) = self.test() {
-            Ok(Expr::Test(x))
-        } else {
-            let ident = self.ident()?;
-            self.assert_next(TokenKind::Equals)?;
-            let val = Box::new(self.expr()?);
+        let t = self.test();
 
-            Ok(Expr::Assignment(AssignmentExpr {
-                ident,
-                val
-            }))
+        match t {
+            Err(ParseError::ActualAssignment(x)) => {
+                let val = Box::new(self.expr()?);
+
+                Ok(Expr::Assignment(AssignmentExpr { ident: x, val }))
+            }
+            _ => Ok(Expr::Test(t?)),
         }
     }
 
@@ -219,14 +236,22 @@ impl Parser<'_> {
         Ok(block)
     }
 
-    fn int(&mut self) -> ParsedStatement<Int> {
+    fn int(&mut self) -> ParsedStatement<Literal> {
         self.next_iter()?.inner_int().ok_or(ParseError::FalseInner)
     }
 
     fn ident(&mut self) -> ParsedStatement<Ident> {
-        self.next_iter()?
+        let id = self
+            .next_iter()?
             .inner_string()
-            .ok_or(ParseError::FalseInner)
+            .ok_or(ParseError::FalseInner)?;
+
+        self.assert_not_next(TokenKind::Equals, ParseError::ActualAssignment(id.clone()))?;
+        self.assert_not_next(TokenKind::Operator('<'), ParseError::ActualTest)?;
+        self.assert_not_next(TokenKind::Operator('+'), ParseError::ActualSum)?;
+        self.assert_not_next(TokenKind::Operator('-'), ParseError::ActualSum)?;
+
+        Ok(id)
     }
 
     fn statement(&mut self) -> ParsedStatement<Statement> {

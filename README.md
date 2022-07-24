@@ -51,10 +51,10 @@ test = sum | sum "<" sum
 
 sum = term | sum "+" sum | sum "-" sum
 
-term = ident | int | paren_expr
+term = ident | literal | paren_expr
 
 ident = { "a".."z" }-
-int = { "0".."9" }-
+literal = { "0".."9" }-
 
 ```
 
