@@ -31,6 +31,8 @@ pub enum TokenKind {
     CloseBrace,
     // =
     Equals,
+    // ,
+    Comma,
 
     Unknown,
 }
@@ -61,6 +63,7 @@ impl Token {
         }
     }
 
+    /// Returns an owned string of the inner.
     pub fn inner_string(&self) -> Option<String> {
         match &self.kind {
             TokenKind::Ident(i) => Some(i.to_string()),
@@ -152,6 +155,7 @@ impl<'a> Cursor<'a> {
                 '{' => TokenKind::OpenBrace,
                 '}' => TokenKind::CloseBrace,
                 '=' => TokenKind::Equals,
+                ',' => TokenKind::Comma,
 
                 first_char if valid_multi_char_start(first_char) => match self.mutli_char(c) {
                     kw if Token::is_keyword(&kw) => {
