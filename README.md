@@ -2,6 +2,17 @@
 
 A simple programming language, for fun.
 
+## Code Sample
+
+The compiler in its current position can parse the following into an AST:
+
+```
+# hi
+fn hello_world() {
+    a = 123
+}
+```
+
 ## Design Decisions
 
 ### Compiling
@@ -45,9 +56,9 @@ paren_ident = "(" { ident } ")"
 
 paren_expr = "(" expr ")"
 
-expr = test | ident "=" expr
+expr = primary | ident "=" expr
 
-test = sum | sum "<" sum
+primary = sum | sum "<" sum
 
 sum = term | sum "+" sum | sum "-" sum
 

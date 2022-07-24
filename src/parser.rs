@@ -7,17 +7,12 @@ enum ParseError {
     FalseInner,
     UnexpectedEOF,
     UnexpectedToken,
-    ActualAssignment(Ident),
-    ActualTest,
-    ActualSum,
 }
 
 #[derive(Debug)]
 enum Operator {
     Add,
     Subtract,
-    Divide,
-    Multiply,
     LessThan,
 }
 
@@ -26,10 +21,16 @@ impl Operator {
         match op {
             '+' => Some(Operator::Add),
             '-' => Some(Operator::Subtract),
-            '/' => Some(Operator::Divide),
-            '*' => Some(Operator::Multiply),
 
             _ => None,
+        }
+    }
+
+    fn precedence(&self) -> usize {
+        match self {
+            LessThan => 0,
+            Add => 1,
+            Subtract => 2,
         }
     }
 }
@@ -61,7 +62,7 @@ struct IfStatement {
 
 #[derive(Debug)]
 enum Expr {
-    Test(Test),
+    Primary(Primary),
     Assignment(AssignmentExpr),
 }
 
@@ -75,7 +76,7 @@ type Ident = String;
 type Literal = usize;
 
 #[derive(Debug)]
-enum Test {
+enum Primary {
     Unary(Sum),
     LT(Op),
 }
@@ -125,7 +126,6 @@ impl Parser<'_> {
 
     fn assert_not_next(&mut self, next: TokenKind, err: ParseError) -> Result<(), ParseError> {
         if next == self.peek_iter()?.kind {
-            self.next_iter()?;
             return Err(err);
         }
 
@@ -178,36 +178,49 @@ impl Parser<'_> {
         }
     }
 
-    fn test(&mut self) -> ParsedStatement<Test> {
+    fn primary(&mut self) -> ParsedStatement<Primary> {
         let s = self.sum();
 
-        match s {
-            Err(ParseError::ActualTest) => {
                 let op1 = Box::new(self.sum()?);
                 self.assert_next(TokenKind::Operator('<'))?;
                 let op2 = Box::new(self.sum()?);
 
-                Ok(Test::LT(Op {
+                Ok(Primary::LT(Op {
                     op1,
                     op2,
                     operator: Operator::LessThan,
                 }))
-            }
-            _ => Ok(Test::Unary(s?)),
-        }
     }
 
     fn expr(&mut self) -> ParsedStatement<Expr> {
-        let t = self.test();
+        self.expr_1(self.primary()?, 0)
+    }
 
-        match t {
-            Err(ParseError::ActualAssignment(x)) => {
-                let val = Box::new(self.expr()?);
+    fn expr_1(&mut self, lhs: Primary, min_prec: usize) -> ParsedStatement<Expr> {
+        let lookahead = self.peek_iter()?;
 
-                Ok(Expr::Assignment(AssignmentExpr { ident: x, val }))
+        let lookahead_op =
+            Operator::char_to_op(lookahead.inner_operator().ok_or(ParseError::FalseInner)?)
+                .ok_or(ParseError::UnexpectedToken)?;
+
+        while lookahead_op.precedence() >= min_prec {
+            let op = lookahead_op;
+            let rhs = self.primary()?;
+            let lookahead = self.peek_iter()?;
+
+            let lookahead_op =
+                Operator::char_to_op(lookahead.inner_operator().ok_or(ParseError::FalseInner)?)
+                    .ok_or(ParseError::UnexpectedToken)?;
+
+            while lookahead_op.precedence() > op.precedence() {
+                let rhs = self.expr_1(rhs, op.precedence() + 1)?;
+                lookahead = self.peek_iter()?;
             }
-            _ => Ok(Expr::Test(t?)),
+
+            lhs = self.primary()?;
         }
+
+        return Ok(Expr::Primary(lhs));
     }
 
     fn paren_expr(&mut self) -> ParsedStatement<ParenExpr> {
@@ -242,10 +255,6 @@ impl Parser<'_> {
             .inner_int()
             .ok_or(ParseError::FalseInner)?;
 
-        self.assert_not_next(TokenKind::Operator('<'), ParseError::ActualTest)?;
-        self.assert_not_next(TokenKind::Operator('+'), ParseError::ActualSum)?;
-        self.assert_not_next(TokenKind::Operator('-'), ParseError::ActualSum)?;
-
         Ok(lit)
     }
 
@@ -254,11 +263,6 @@ impl Parser<'_> {
             .next_iter()?
             .inner_string()
             .ok_or(ParseError::FalseInner)?;
-
-        self.assert_not_next(TokenKind::Equals, ParseError::ActualAssignment(id.clone()))?;
-        self.assert_not_next(TokenKind::Operator('<'), ParseError::ActualTest)?;
-        self.assert_not_next(TokenKind::Operator('+'), ParseError::ActualSum)?;
-        self.assert_not_next(TokenKind::Operator('-'), ParseError::ActualSum)?;
 
         Ok(id)
     }
