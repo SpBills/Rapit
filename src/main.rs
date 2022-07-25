@@ -15,9 +15,6 @@ fn main() {
         TokenKind::Comment(_) | TokenKind::Unknown | TokenKind::Whitespace => false,
         _ => true
     }).collect::<Vec<_>>();
-
-    println!("{:?}", filtered_tokens);
-
     let ast = Parser::parse(filtered_tokens);
 
     println!("{:#?}", ast)
