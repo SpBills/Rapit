@@ -45,7 +45,7 @@ pub enum Expr {
 }
 
 #[derive(Debug)]
-struct AssignmentExpr {
+pub struct AssignmentExpr {
     ident: Ident,
     val: Box<Expr>,
 }
