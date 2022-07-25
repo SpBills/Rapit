@@ -186,7 +186,7 @@ impl<'a> Cursor<'a> {
                 x if x.is_whitespace() => TokenKind::Whitespace,
 
                 // Operators
-                '+' | '-' | '*' | '/' | '=' => TokenKind::Operator(Operator::char_to_op(c).unwrap()),
+                '+' | '-' | '*' | '/' | '=' | '<' => TokenKind::Operator(Operator::char_to_op(c).unwrap()),
 
                 '#' => self.comment(c),
                 '(' => TokenKind::OpenParen,
