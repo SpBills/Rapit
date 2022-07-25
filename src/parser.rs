@@ -165,8 +165,17 @@ impl Parser<'_> {
         self.assert_next(TokenKind::OpenParen)?;
 
         let mut block = vec![];
-        while self.peek_iter()?.kind != TokenKind::CloseParen {
-            block.push(self.ident()?)
+        while self.peek_iter().is_ok() {
+            if self.peek_iter()?.kind != TokenKind::CloseParen {
+                block.push(self.ident()?);
+
+                // don't require a comma before final paren
+                if self.peek_iter()?.kind != TokenKind::CloseParen {
+                    self.assert_next(TokenKind::Comma)?;
+                }
+            } else {
+                break;
+            }
         }
 
         self.assert_next(TokenKind::CloseParen)?;
