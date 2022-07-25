@@ -3,14 +3,14 @@ use std::{iter::Peekable, slice::Iter};
 use crate::lexer::{KeywordKind, Operator, Token, TokenKind};
 
 #[derive(Debug)]
-enum ParseError {
+pub enum ParseError {
     FalseInner,
     UnexpectedEOF,
     UnexpectedToken,
 }
 
 #[derive(Debug)]
-enum Statement {
+pub enum Statement {
     If(IfStatement),
     Fn(FnStatement),
     Block(BlockStatement),
@@ -18,24 +18,24 @@ enum Statement {
 }
 
 #[derive(Debug)]
-struct FnStatement {
+pub struct FnStatement {
     ident: Ident,
     paren_ident: ParenIdent,
     statement: Box<Statement>,
 }
 
-type ParenExpr = Vec<Expr>;
-type ParenIdent = Vec<Ident>;
-type BlockStatement = Vec<Statement>;
+pub type ParenExpr = Vec<Expr>;
+pub type ParenIdent = Vec<Ident>;
+pub type BlockStatement = Vec<Statement>;
 
 #[derive(Debug)]
-struct IfStatement {
+pub struct IfStatement {
     paren: ParenExpr,
     statement: Box<Statement>,
 }
 
 #[derive(Debug)]
-enum Expr {
+pub enum Expr {
     Ident(Ident),
     Literal(Literal),
     ParenExpr(ParenExpr),
@@ -51,20 +51,20 @@ struct AssignmentExpr {
 }
 
 #[derive(Debug)]
-struct Op {
+pub struct Op {
     op1: Box<Expr>,
     op2: Box<Expr>,
     operator: Operator,
 }
 
-type Ident = String;
-type Literal = usize;
+pub type Ident = String;
+pub type Literal = usize;
 
 /// The top node of the AST, with the body
 /// representing all expressions in the body of the file.
 #[derive(Debug)]
 pub struct AST {
-    program: Vec<Statement>,
+    pub program: Vec<Statement>,
 }
 
 type ParsedStatement<T> = Result<T, ParseError>;
