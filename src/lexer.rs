@@ -6,6 +6,39 @@ pub enum KeywordKind {
     If,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Operator {
+    None,
+    Assign,
+    Add,
+    Subtract,
+    LessThan,
+}
+
+impl Operator {
+    fn char_to_op(op: char) -> Option<Self> {
+        match op {
+            ' ' => Some(Operator::None),
+            '=' => Some(Operator::Assign),
+            '+' => Some(Operator::Add),
+            '-' => Some(Operator::Subtract),
+            '<' => Some(Operator::LessThan),
+
+            _ => None,
+        }
+    }
+
+    pub fn precedence(&self) -> usize {
+        match self {
+            Operator::None => 0,
+            Operator::Assign => 1,
+            Operator::LessThan => 10,
+            Operator::Add => 20,
+            Operator::Subtract => 30,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
     // Multi Char
@@ -18,7 +51,7 @@ pub enum TokenKind {
     Keyword(KeywordKind),
 
     // +, -, *, /
-    Operator(char),
+    Operator(Operator),
     // " "
     Whitespace,
     // (
@@ -29,8 +62,6 @@ pub enum TokenKind {
     OpenBrace,
     // }
     CloseBrace,
-    // =
-    Equals,
     // ,
     Comma,
 
@@ -89,7 +120,7 @@ impl Token {
         }
     }
 
-    pub fn inner_operator(&self) -> Option<char> {
+    pub fn inner_operator(&self) -> Option<Operator> {
         match self.kind {
             TokenKind::Operator(i) => Some(i),
             _ => None,
@@ -155,14 +186,13 @@ impl<'a> Cursor<'a> {
                 x if x.is_whitespace() => TokenKind::Whitespace,
 
                 // Operators
-                '+' | '-' | '*' | '/' => TokenKind::Operator(c),
+                '+' | '-' | '*' | '/' | '=' => TokenKind::Operator(Operator::char_to_op(c).unwrap()),
 
                 '#' => self.comment(c),
                 '(' => TokenKind::OpenParen,
                 ')' => TokenKind::CloseParen,
                 '{' => TokenKind::OpenBrace,
                 '}' => TokenKind::CloseBrace,
-                '=' => TokenKind::Equals,
                 ',' => TokenKind::Comma,
 
                 first_char if valid_multi_char_start(first_char) => match self.mutli_char(c) {

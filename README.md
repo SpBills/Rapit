@@ -56,11 +56,11 @@ paren_ident = "(" { ident } ")"
 
 paren_expr = "(" expr ")"
 
-expr = primary | ident "=" expr
-
-primary = sum | sum "<" sum
-
-sum = term | sum "+" sum | sum "-" sum
+expr = term | 
+    ident "=" expr | 
+    expr '+' expr | 
+    expr '-' expr | 
+    expr '<' expr
 
 term = ident | literal | paren_expr
 

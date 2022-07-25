@@ -1,38 +1,12 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::lexer::{KeywordKind, Token, TokenKind};
+use crate::lexer::{KeywordKind, Operator, Token, TokenKind};
 
 #[derive(Debug)]
 enum ParseError {
     FalseInner,
     UnexpectedEOF,
     UnexpectedToken,
-}
-
-#[derive(Debug)]
-enum Operator {
-    Add,
-    Subtract,
-    LessThan,
-}
-
-impl Operator {
-    fn char_to_op(op: char) -> Option<Self> {
-        match op {
-            '+' => Some(Operator::Add),
-            '-' => Some(Operator::Subtract),
-
-            _ => None,
-        }
-    }
-
-    fn precedence(&self) -> usize {
-        match self {
-            LessThan => 0,
-            Add => 1,
-            Subtract => 2,
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -62,8 +36,12 @@ struct IfStatement {
 
 #[derive(Debug)]
 enum Expr {
-    Primary(Primary),
+    Ident(Ident),
+    Literal(Literal),
+    ParenExpr(ParenExpr),
+    Term(Box<Expr>),
     Assignment(AssignmentExpr),
+    BinOp(Op),
 }
 
 #[derive(Debug)]
@@ -72,35 +50,15 @@ struct AssignmentExpr {
     val: Box<Expr>,
 }
 
-type Ident = String;
-type Literal = usize;
-
-#[derive(Debug)]
-enum Primary {
-    Unary(Sum),
-    LT(Op),
-}
-
 #[derive(Debug)]
 struct Op {
-    op1: Box<Sum>,
-    op2: Box<Sum>,
+    op1: Box<Expr>,
+    op2: Box<Expr>,
     operator: Operator,
 }
 
-#[derive(Debug)]
-enum Sum {
-    Term(Term),
-    AddOp(Op),
-    SubOp(Op),
-}
-
-#[derive(Debug)]
-enum Term {
-    Ident(Ident),
-    Literal(Literal),
-    ParenExpr(ParenExpr),
-}
+type Ident = String;
+type Literal = usize;
 
 /// The top node of the AST, with the body
 /// representing all expressions in the body of the file.
@@ -124,14 +82,6 @@ impl Parser<'_> {
         self.iter.next().ok_or(ParseError::UnexpectedEOF)
     }
 
-    fn assert_not_next(&mut self, next: TokenKind, err: ParseError) -> Result<(), ParseError> {
-        if next == self.peek_iter()?.kind {
-            return Err(err);
-        }
-
-        Ok(())
-    }
-
     fn assert_next(&mut self, next: TokenKind) -> Result<&Token, ParseError> {
         let n = self.next_iter()?;
         if next != n.kind {
@@ -141,86 +91,61 @@ impl Parser<'_> {
         Ok(n)
     }
 
-    fn term(&mut self) -> ParsedStatement<Term> {
+    fn term(&mut self) -> ParsedStatement<Expr> {
         let next = self.peek_iter()?;
 
-        println!("{:?}", next);
-
         match next.kind {
-            TokenKind::Ident(_) => Ok(Term::Ident(self.ident()?)),
-            TokenKind::Literal(_) => Ok(Term::Literal(self.literal()?)),
+            TokenKind::Ident(_) => Ok(Expr::Ident(self.ident()?)),
+            TokenKind::Literal(_) => Ok(Expr::Literal(self.literal()?)),
 
             _ => Err(ParseError::UnexpectedToken),
         }
     }
 
-    fn sum(&mut self) -> ParsedStatement<Sum> {
-        let t = self.term();
-
-        match t {
-            Err(ParseError::ActualSum) => {
-                let op1 = Box::new(self.sum()?);
-                let op_string = self
-                    .next_iter()?
-                    .inner_string()
-                    .ok_or(ParseError::FalseInner)?;
-                let op = Operator::char_to_op(op_string.chars().next().unwrap())
-                    .ok_or(ParseError::UnexpectedToken)?;
-                let op2 = Box::new(self.sum()?);
-
-                Ok(Sum::AddOp(Op {
-                    op1,
-                    op2,
-                    operator: op,
-                }))
-            }
-            _ => Ok(Sum::Term(t?)),
-        }
-    }
-
-    fn primary(&mut self) -> ParsedStatement<Primary> {
-        let s = self.sum();
-
-                let op1 = Box::new(self.sum()?);
-                self.assert_next(TokenKind::Operator('<'))?;
-                let op2 = Box::new(self.sum()?);
-
-                Ok(Primary::LT(Op {
-                    op1,
-                    op2,
-                    operator: Operator::LessThan,
-                }))
-    }
-
     fn expr(&mut self) -> ParsedStatement<Expr> {
-        self.expr_1(self.primary()?, 0)
+        let term = self.term()?;
+        self.expr_1(term, 0)
     }
 
-    fn expr_1(&mut self, lhs: Primary, min_prec: usize) -> ParsedStatement<Expr> {
-        let lookahead = self.peek_iter()?;
-
-        let lookahead_op =
-            Operator::char_to_op(lookahead.inner_operator().ok_or(ParseError::FalseInner)?)
-                .ok_or(ParseError::UnexpectedToken)?;
-
-        while lookahead_op.precedence() >= min_prec {
-            let op = lookahead_op;
-            let rhs = self.primary()?;
+    /// https://docs.rs/pest/latest/src/pest/prec_climber.rs.html#89-91
+    fn expr_1(&mut self, mut lhs: Expr, min_prec: usize) -> ParsedStatement<Expr> {
+        while self.peek_iter().is_ok() {
             let lookahead = self.peek_iter()?;
+            let op_option = lookahead.inner_operator();
 
-            let lookahead_op =
-                Operator::char_to_op(lookahead.inner_operator().ok_or(ParseError::FalseInner)?)
-                    .ok_or(ParseError::UnexpectedToken)?;
+            if let Some(op) = op_option {
+                let prec = op.precedence();
+                if prec >= min_prec {
+                    self.next_iter()?;
+                    let mut rhs = self.term()?;
 
-            while lookahead_op.precedence() > op.precedence() {
-                let rhs = self.expr_1(rhs, op.precedence() + 1)?;
-                lookahead = self.peek_iter()?;
+                    while self.peek_iter().is_ok() {
+                        let lookahead = self.peek_iter()?;
+                        if let Some(lookahead_op) = lookahead.inner_operator() {
+                            if lookahead_op.precedence() > prec {
+                                rhs = self.expr_1(rhs, prec + 1)?;
+                            } else {
+                                break;
+                            }
+                        } else {
+                            break;
+                        }
+                    }
+
+                    lhs = Expr::BinOp(Op {
+                        op1: Box::new(lhs),
+                        operator: op,
+                        op2: Box::new(rhs),
+                    });
+                } else {
+                    break;
+                }
+            } else {
+                break;
             }
-
-            lhs = self.primary()?;
         }
 
-        return Ok(Expr::Primary(lhs));
+        Ok(Expr::Term(Box::new(lhs)))
     }
 
     fn paren_expr(&mut self) -> ParsedStatement<ParenExpr> {
