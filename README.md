@@ -9,7 +9,13 @@ The compiler in its current position can parse the following into an AST:
 ```
 # hi
 fn hello_world() {
-    a = 123
+    a = 123 < 546
+}
+
+fn goodbye_world() {
+    b = 4 - 6
+    a = 57899900 + 243
+    a + b
 }
 ```
 
