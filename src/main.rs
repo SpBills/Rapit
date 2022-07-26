@@ -3,6 +3,7 @@ use parser::Parser;
 
 mod lexer;
 mod parser;
+mod codegen;
 
 fn main() {
     // let input_path: String = std::env::args().collect::<Vec<_>>()[1].to_owned();

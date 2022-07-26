@@ -7,16 +7,9 @@ A simple programming language, for fun.
 The compiler in its current position can parse the following into an AST:
 
 ```
-# hi
-fn hello_world() {
-    a = 123 < 546
-}
 
-fn goodbye_world() {
-    b = 4 - 6
-    a = 57899900 + 243
-    a + b
-}
+                }
+
 ```
 
 ## Design Decisions
@@ -58,7 +51,7 @@ statement = "if" paren_expr statement |
             "{" { statement } "}" |
             expr ";"
 
-paren_ident = "(" { ident } ")"
+paren_ident = "(" { ident[,] } ")"
 
 paren_expr = "(" expr ")"
 
