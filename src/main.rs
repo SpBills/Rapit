@@ -1,7 +1,9 @@
+use codegen::Generator;
 use lexer::{Cursor, TokenKind};
 use parser::Parser;
 
 mod lexer;
+mod exprs;
 mod parser;
 mod codegen;
 
@@ -18,5 +20,8 @@ fn main() {
     }).collect::<Vec<_>>();
     let ast = Parser::parse(filtered_tokens);
 
-    println!("{:#?}", ast)
+    let mut gen = Generator::new(ast, "out.cpp");
+    gen.run().unwrap();
+
+    println!("Done");
 }

@@ -4,15 +4,6 @@ use std::fmt::Display;
 
 use crate::lexer::Operator;
 
-macro_rules! enum_inner {
-    ($value:expr, $pattern:pat => $extracted_value:expr) => {
-        match $value {
-            $pattern => $extracted_value,
-            _ => panic!("Pattern doesn't match!"),
-        }
-    };
-}
-
 #[derive(Debug)]
 pub enum Statement {
     If(IfStatement),
@@ -23,9 +14,9 @@ pub enum Statement {
 
 #[derive(Debug)]
 pub struct FnStatement {
-    ident: Ident,
-    paren_ident: ParenIdent,
-    statement: Box<Statement>,
+    pub ident: Ident,
+    pub paren_ident: ParenIdent,
+    pub statement: Box<Statement>,
 }
 
 #[derive(Debug)]
@@ -59,9 +50,9 @@ pub struct AssignmentExpr {
 
 #[derive(Debug)]
 pub struct Op {
-    op1: Box<Expr>,
-    op2: Box<Expr>,
-    operator: Operator,
+    pub op1: Box<Expr>,
+    pub op2: Box<Expr>,
+    pub operator: Operator,
 }
 
 pub type Ident = String;
@@ -69,7 +60,7 @@ pub type Literal = usize;
 
 impl Display for BlockStatement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{")?;
+        write!(f, "{{\n")?;
         self.0
             .iter()
             .fold(Ok(()), |res, stmt| res.and_then(|_| write!(f, "{}", stmt)))?;
@@ -92,7 +83,7 @@ impl Display for FnStatement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "void {}{} {}",
+            "void {}{}\n{}",
             self.ident, self.paren_ident, self.statement
         )
     }
@@ -102,7 +93,7 @@ impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::If(i) => write!(f, "{}", i),
-            Self::Expr(i) => write!(f, "{}", i),
+            Self::Expr(i) => writeln!(f, "{};", i),
             Self::Fn(i) => write!(f, "{}", i),
             Self::Block(i) => write!(f, "{}", i),
         }
@@ -111,7 +102,7 @@ impl Display for Statement {
 
 impl Display for IfStatement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "if {} {}", self.paren, self.statement)
+        write!(f, "if {}\n{}", self.paren, self.statement)
     }
 }
 
@@ -134,7 +125,7 @@ impl Display for AssignmentExpr {
 impl Display for Expr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Ident(i) => write!(f, "{}", i),
+            Self::Ident(i) => write!(f, "{}", i.to_owned()),
             Self::Literal(i) => write!(f, "{}", i),
             Self::ParenExpr(i) => write!(f, "{}", i),
             Self::Term(i) => write!(f, "{}", i),
@@ -146,7 +137,7 @@ impl Display for Expr {
 
 impl Display for Operator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.op_to_char().unwrap())
     }
 }
 

@@ -16,6 +16,16 @@ pub enum Operator {
 }
 
 impl Operator {
+    pub fn op_to_char(&self) -> Option<char> {
+        match self {
+            Self::None => Some(' '),
+            Self::Assign => Some('='),
+            Self::Add => Some('+'),
+            Self::Subtract => Some('-'),
+            Self::LessThan => Some('<'),
+        }
+    }
+
     fn char_to_op(op: char) -> Option<Self> {
         match op {
             ' ' => Some(Operator::None),
