@@ -1,6 +1,6 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::lexer::{KeywordKind, Operator, Token, TokenKind};
+use crate::{lexer::{KeywordKind, Token, TokenKind}, exprs::{Statement, Expr, Op, ParenExpr, ParenIdent, Literal, Ident, IfStatement, FnStatement, BlockStatement}};
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -8,57 +8,6 @@ pub enum ParseError {
     UnexpectedEOF,
     UnexpectedToken,
 }
-
-#[derive(Debug)]
-pub enum Statement {
-    If(IfStatement),
-    Fn(FnStatement),
-    Block(BlockStatement),
-    Expr(Expr),
-}
-
-#[derive(Debug)]
-pub struct FnStatement {
-    ident: Ident,
-    paren_ident: ParenIdent,
-    statement: Box<Statement>,
-}
-
-pub type ParenExpr = Vec<Expr>;
-pub type ParenIdent = Vec<Ident>;
-pub type BlockStatement = Vec<Statement>;
-
-#[derive(Debug)]
-pub struct IfStatement {
-    paren: ParenExpr,
-    statement: Box<Statement>,
-}
-
-#[derive(Debug)]
-pub enum Expr {
-    Ident(Ident),
-    Literal(Literal),
-    ParenExpr(ParenExpr),
-    Term(Box<Expr>),
-    Assignment(AssignmentExpr),
-    BinOp(Op),
-}
-
-#[derive(Debug)]
-pub struct AssignmentExpr {
-    ident: Ident,
-    val: Box<Expr>,
-}
-
-#[derive(Debug)]
-pub struct Op {
-    op1: Box<Expr>,
-    op2: Box<Expr>,
-    operator: Operator,
-}
-
-pub type Ident = String;
-pub type Literal = usize;
 
 /// The top node of the AST, with the body
 /// representing all expressions in the body of the file.
@@ -158,7 +107,7 @@ impl Parser<'_> {
 
         self.assert_next(TokenKind::CloseParen)?;
 
-        Ok(block)
+        Ok(ParenExpr(block))
     }
 
     fn paren_ident(&mut self) -> ParsedStatement<ParenIdent> {
@@ -180,7 +129,7 @@ impl Parser<'_> {
 
         self.assert_next(TokenKind::CloseParen)?;
 
-        Ok(block)
+        Ok(ParenIdent(block))
     }
 
     fn literal(&mut self) -> ParsedStatement<Literal> {
@@ -241,7 +190,7 @@ impl Parser<'_> {
                 }
 
                 self.assert_next(TokenKind::CloseBrace)?;
-                Ok(Statement::Block(block))
+                Ok(Statement::Block(BlockStatement(block)))
             }
             _ => {
                 let expr = self.expr()?;
