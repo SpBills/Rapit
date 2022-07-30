@@ -1,5 +1,7 @@
 /// Contains all parser tokens and structs.
 /// Also implements the parser Display trait for codegen.
+/// 
+/// TODO: Refactor pub fields to private by impl ::new operator.
 use std::fmt::Display;
 
 use crate::lexer::Operator;
@@ -10,6 +12,7 @@ pub enum Statement {
     Fn(FnStatement),
     Block(BlockStatement),
     Expr(Expr),
+    Assignment(AssignmentStatement)
 }
 
 #[derive(Debug)]
@@ -38,14 +41,13 @@ pub enum Expr {
     Literal(Literal),
     ParenExpr(ParenExpr),
     Term(Box<Expr>),
-    Assignment(AssignmentExpr),
     BinOp(Op),
 }
 
 #[derive(Debug)]
-pub struct AssignmentExpr {
-    ident: Ident,
-    val: Box<Expr>,
+pub struct AssignmentStatement {
+    pub ident: Ident,
+    pub val: Box<Expr>,
 }
 
 #[derive(Debug)]
@@ -89,6 +91,7 @@ impl Display for FnStatement {
     }
 }
 
+
 impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -96,6 +99,7 @@ impl Display for Statement {
             Self::Expr(i) => writeln!(f, "{};", i),
             Self::Fn(i) => write!(f, "{}", i),
             Self::Block(i) => write!(f, "{}", i),
+            Self::Assignment(a) => write!(f, "{}", a)
         }
     }
 }
@@ -116,7 +120,7 @@ impl Display for ParenExpr {
     }
 }
 
-impl Display for AssignmentExpr {
+impl Display for AssignmentStatement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} = {}", self.ident, self.val)
     }
@@ -129,7 +133,6 @@ impl Display for Expr {
             Self::Literal(i) => write!(f, "{}", i),
             Self::ParenExpr(i) => write!(f, "{}", i),
             Self::Term(i) => write!(f, "{}", i),
-            Self::Assignment(i) => write!(f, "{}", i),
             Self::BinOp(i) => write!(f, "{}", i),
         }
     }

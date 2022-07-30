@@ -4,12 +4,12 @@ use std::str::Chars;
 pub enum KeywordKind {
     Fn,
     If,
+    Let
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Operator {
     None,
-    Assign,
     Add,
     Subtract,
     LessThan,
@@ -19,7 +19,6 @@ impl Operator {
     pub fn op_to_char(&self) -> Option<char> {
         match self {
             Self::None => Some(' '),
-            Self::Assign => Some('='),
             Self::Add => Some('+'),
             Self::Subtract => Some('-'),
             Self::LessThan => Some('<'),
@@ -29,7 +28,6 @@ impl Operator {
     fn char_to_op(op: char) -> Option<Self> {
         match op {
             ' ' => Some(Operator::None),
-            '=' => Some(Operator::Assign),
             '+' => Some(Operator::Add),
             '-' => Some(Operator::Subtract),
             '<' => Some(Operator::LessThan),
@@ -41,7 +39,6 @@ impl Operator {
     pub fn precedence(&self) -> usize {
         match self {
             Operator::None => 0,
-            Operator::Assign => 1,
             Operator::LessThan => 10,
             Operator::Add => 20,
             Operator::Subtract => 30,
@@ -64,6 +61,8 @@ pub enum TokenKind {
     Operator(Operator),
     // " "
     Whitespace,
+    // =
+    Equals,
     // (
     OpenParen,
     // )
@@ -99,6 +98,7 @@ impl Token {
         match kw {
             "fn" => Some(KeywordKind::Fn),
             "if" => Some(KeywordKind::If),
+            "let" => Some(KeywordKind::Let),
 
             _ => None,
         }
@@ -196,7 +196,7 @@ impl<'a> Cursor<'a> {
                 x if x.is_whitespace() => TokenKind::Whitespace,
 
                 // Operators
-                '+' | '-' | '*' | '/' | '=' | '<' => TokenKind::Operator(Operator::char_to_op(c).unwrap()),
+                '+' | '-' | '*' | '/' | '<' => TokenKind::Operator(Operator::char_to_op(c).unwrap()),
 
                 '#' => self.comment(c),
                 '(' => TokenKind::OpenParen,

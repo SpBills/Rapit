@@ -56,7 +56,7 @@ paren_ident = "(" { ident[,] } ")"
 paren_expr = "(" expr ")"
 
 expr = term | 
-    ident "=" expr | 
+    "let" ident "=" expr | 
     expr '+' expr | 
     expr '-' expr | 
     expr '<' expr

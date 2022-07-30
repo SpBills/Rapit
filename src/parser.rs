@@ -1,6 +1,12 @@
 use std::{iter::Peekable, slice::Iter};
 
-use crate::{lexer::{KeywordKind, Token, TokenKind}, exprs::{Statement, Expr, Op, ParenExpr, ParenIdent, Literal, Ident, IfStatement, FnStatement, BlockStatement}};
+use crate::{
+    exprs::{
+        AssignmentStatement, BlockStatement, Expr, FnStatement, Ident, IfStatement, Literal, Op,
+        ParenExpr, ParenIdent, Statement,
+    },
+    lexer::{KeywordKind, Token, TokenKind},
+};
 
 #[derive(Debug)]
 pub enum ParseError {
@@ -179,6 +185,18 @@ impl Parser<'_> {
                     ident: ident,
                     paren_ident: paren_ident,
                     statement: Box::new(stmt),
+                }))
+            }
+            TokenKind::Keyword(KeywordKind::Let) => {
+                self.assert_next(TokenKind::Keyword(KeywordKind::Let))?;
+
+                let ident = self.ident()?;
+
+                let expr = self.expr()?;
+
+                Ok(Statement::Assignment(AssignmentStatement {
+                    ident: ident,
+                    val: Box::new(expr),
                 }))
             }
             TokenKind::OpenBrace => {
