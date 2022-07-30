@@ -85,7 +85,7 @@ impl Display for FnStatement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "void {}{}\n{}",
+            "int {}{}\n{}",
             self.ident, self.paren_ident, self.statement
         )
     }
