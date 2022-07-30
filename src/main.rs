@@ -20,6 +20,9 @@ fn main() {
     }).collect::<Vec<_>>();
     let ast = Parser::parse(filtered_tokens);
 
+    println!("Printing AST...");
+    println!("{:#?}", &ast);
+
     let mut gen = Generator::new(ast, "out.cpp");
     gen.run().unwrap();
 

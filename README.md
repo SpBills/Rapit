@@ -21,7 +21,9 @@ The compiler in its current position can parse the following into an AST:
 2. Parsing
 3. Code-Gen
 
-Everything will be transpiled into C for now.
+Everything will be transpiled into C++ for now.
+
+Target will be C++ 20. Will be relying heavily on `auto` keyword for now.
 
 ### EBNF for parsing
 
@@ -41,13 +43,12 @@ comment | (* ... *) |
 special sequence | ? ... ? |
 exception | - |
 
-Note that this is not correct yet.
-
 ```
 program = { statement }-
 
 statement = "if" paren_expr statement |
             "fn" ident paren_ident statement |
+            "let" ident "=" expr |
             "{" { statement } "}" |
             expr ";"
 
@@ -56,7 +57,6 @@ paren_ident = "(" { ident[,] } ")"
 paren_expr = "(" expr ")"
 
 expr = term | 
-    "let" ident "=" expr | 
     expr '+' expr | 
     expr '-' expr | 
     expr '<' expr

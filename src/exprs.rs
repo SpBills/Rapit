@@ -1,6 +1,6 @@
 /// Contains all parser tokens and structs.
 /// Also implements the parser Display trait for codegen.
-/// 
+///
 /// TODO: Refactor pub fields to private by impl ::new operator.
 use std::fmt::Display;
 
@@ -12,7 +12,7 @@ pub enum Statement {
     Fn(FnStatement),
     Block(BlockStatement),
     Expr(Expr),
-    Assignment(AssignmentStatement)
+    Assignment(AssignmentStatement),
 }
 
 #[derive(Debug)]
@@ -91,7 +91,6 @@ impl Display for FnStatement {
     }
 }
 
-
 impl Display for Statement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -99,7 +98,7 @@ impl Display for Statement {
             Self::Expr(i) => writeln!(f, "{};", i),
             Self::Fn(i) => write!(f, "{}", i),
             Self::Block(i) => write!(f, "{}", i),
-            Self::Assignment(a) => write!(f, "{}", a)
+            Self::Assignment(a) => writeln!(f, "{};", a),
         }
     }
 }
@@ -122,7 +121,7 @@ impl Display for ParenExpr {
 
 impl Display for AssignmentStatement {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} = {}", self.ident, self.val)
+        write!(f, "auto {} = {}", self.ident, self.val)
     }
 }
 
